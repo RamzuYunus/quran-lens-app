@@ -1,0 +1,14 @@
+packages:
+  "framer-motion": "For elegant page transitions and interactions"
+  "clsx": "Utility for constructing className strings"
+  "tailwind-merge": "Utility for merging tailwind classes"
+  "lucide-react": "Icons for the UI"
+
+images:
+  - path: "artifacts/quran-lens/public/images/hero-scholarly.png"
+    description: "Dark, moody, elegant abstract background resembling ancient illuminated manuscripts or dusty scholarly archives with subtle warm amber and gold light leaks on deep charcoal"
+    aspect_ratio: "16:9"
+
+notes:
+  - Using generated hooks from @workspace/api-client-react
+  - Aesthetic is 'scholarly dark' - deep warm grays, amber accents, serif fonts

@@ -1,0 +1,214 @@
+You are building a local, offline‑capable Quran visualization and translation lens app for my personal use on Ubuntu 24.04.
+
+The app must:
+
+1. Run entirely on my PC (no forced cloud hosting).
+   - It should be structured so I can:
+     - Download the entire project as a zip / tarball.
+     - Run it with Python + uvicorn on `localhost:3000`.
+   - No mobile app or Replit mobile features are needed.
+
+2. Core idea
+   - Provide **multiple “lenses”** for interpreting the Quran, including:
+     - Quantum‑field‑coherence lens.
+     - Economic‑science lens.
+     - Other lenses I may add later (e.g., neuroscience, ecological, political).
+   - In these lenses, the app:
+     - Reframes core terms (Allah, angels, etc.) using non‑Hebrew, pre‑Islamic classical Arabic roots, matched to modern concepts (e.g., omnipresent field, field operators, economic agents, etc.).
+     - Stores each verse with:
+       - Original Arabic.
+       - Root‑based natural‑language glossary.
+       - One or more “lens translations” (JSON per verse).
+
+3. Stack (for Replit, but exportable to my PC)
+   - Backend:
+     - Python 3.10+ (FastAPI + httpx).
+   - Frontend:
+     - HTML + CSS + vanilla JavaScript (no React if you can avoid it).
+   - Local DB:
+     - SQLite or just JSON files (`data/quran_arabic.json`, `data/lens_rules/*.md`, `data/translations/*.json`).
+   - AI backend:
+     - Integrates with:
+       - A local Llama‑style model (via Ollama on `http://localhost:11434`).
+       - Optionally, external APIs such as Perplexity’s pplx‑api or OpenAI (toggle‑able via a flag in Python).
+   - UI:
+     - Runs in a browser at `http://localhost:3000`.
+     - Designed for single‑user, offline experimentation.
+
+4. Full project structure on disk (Replit and then my local machine)
+
+When you generate the project, create this structure:
+
+quran-lens-app/
+├── backend/
+│   ├── main.py                # FastAPI server
+│   └── requirements.txt       # fastapi uvicorn httpx
+├── frontend/
+│   └── index.html             # UI: glossary editor, run bulk, live display
+├── data/
+│   ├── quran_arabic.json      # Quran verses in {"surah", "ayah", "arabic"}
+│   ├── lens_rules/            # e.g., quantum_coherence.md, economics.md
+│   └── translations/          # generated JSON per lens
+├── README.md                  # brief setup guide for Ubuntu
+
+5. Backend requirements in `backend/main.py`
+
+The backend must:
+
+5.1 Constants and API flags:
+
+app = FastAPI(...)
+
+OLLAMA_URL = "http://localhost:11434/api/generate"
+LAYER_DIR = "../data/lens_rules"
+TRANSLATION_DIR = "../data/translations"
+QURAN_FILE = "../data/quran_arabic.json"
+
+# To switch to Perplexity / OpenAI‑style APIs
+USE_REMOTE_API = False   # set to True to use REMOTE_API_URL instead of Ollama
+REMOTE_API_URL = "https://api.perplexity.ai/chat/completions"
+REMOTE_MODEL = "llama‑2‑70b‑chat"
+REMOTE_API_KEY = "pplx‑..."  # to be filled in by user
+
+5.2 Endpoints:
+
+- app.mount("/static", StaticFiles(directory="../frontend"), name="static")
+- @app.get("/")
+  Return FileResponse("../frontend/index.html")
+
+- @app.post("/save_rules")
+  Use Pydantic model SaveRulesRequest(layer: str, rules: str)
+  - Save rules to: os.path.join(LAYER_DIR, f"{layer}.md")
+  - Return: {"msg": "Rules saved", "path": path}
+
+- @app.post("/run_bulk")
+  Use Pydantic model RunBulkRequest(layer: str)
+  - Read rules from LAYER_DIR/{layer}.md
+  - Read QURAN_FILE as JSON
+  - For each verse:
+    - Build a prompt based on the rules text.
+    - If USE_REMOTE_API:
+      - Call REMOTE_API_URL (Perplexity‑compatible) with `system` + `user` prompt.
+      - Extract assistant message content and append to results with:
+        {"surah", "ayah", "arabic", "translated"}
+    - Else:
+      - Call OLLAMA_URL with `payload = {"model": "llama3.2:3b", "prompt": prompt, "stream": False}`
+      - Use data.get("response", "...") and append to results as above.
+    - On all errors, still log an error‑filled verse object so the JSON is valid.
+  - Save full results to: os.path.join(TRANSLATION_DIR, f"{layer}.json")
+  - Return:
+    {
+      "msg": "Bulk generation done",
+      "output_path": "...",
+      "results": results   # so the UI can consume it
+    }
+
+- (@app.get("/api/quran/surah/{surah_id}")
+  Optional: pull surah verses from a free API such as:
+  api_url = "https://alquran-api.pages.dev/api/quran/surah/{surah_id}?lang=ar"
+  - Convert to [{"surah": ..., "ayah": ..., "arabic": ...}] and return.
+
+5.3 Ensure all JSON is valid and safe for UI:
+   - Never return `{"error": ""}` alone; every item in `results` must have at least:
+     {"surah", "ayah", "arabic", "translated"} (or fallback text).
+
+6. Frontend (`frontend/index.html`)
+
+The UI must:
+
+6.1 Layout:
+
+- <h1>Quran Lens App</h1>
+- Two sections:
+  - Save Rules
+  - Run Bulk Translation
+
+6.2 Rules editor:
+
+- Textarea for:
+  - LAYER name (e.g., quantum_coherence, economics).
+  - Markdown‑style glossary, e.g.:
+      LAYER: quantum_coherence
+      DESCRIPTION: ...
+      GLOSSARY:
+      - Allah → "transcendent Intelligence behind the quantum omnipresent field"
+      - Mala'ikah → "field operators / regulatory patterns"
+      ...
+- Button: “Save Rules”
+- Clicking it should:
+  - POST to /save_rules with {layer, rules} (JSON).
+  - Show the JSON response in a div#output.
+
+6.3 Run bulk section:
+
+- Input for lens (e.g., "quantum_coherence").
+- Button: “Run Bulk Generation”
+- Two divs:
+  - #output — show JSON response from /run_bulk
+  - #results — show live preview:
+      <h2>Results (preview)</h2>
+      <p><strong>112:1</strong> قُلْ هُوَ اللَّهُ أَحَدٌ<br><em>→ ...</em></p>
+      ...
+  - For each item in data.results, create:
+      <p><strong>{surah}:{ayah}</strong> {arabic}<br><em>→ {translated}</em></p>
+
+6.4 JavaScript:
+
+- Use fetch() with:
+  - const API = "/";  // since Nginx uvicorn hosts both
+- Attach event listeners:
+  - Use DOMContentLoaded + event listeners on buttons, do not rely on inline onclick in HTML (to avoid “ReferenceError: saveRules is not defined”).
+- Example skeleton:
+
+  document.addEventListener("DOMContentLoaded", () => {
+    document.getElementById("saveRulesBtn").addEventListener("click", saveRules);
+    document.getElementById("runBulkBtn").addEventListener("click", runBulk);
+  });
+
+  async function saveRules() { ... }
+  async function runBulk() { ... }
+
+6.5 Note about live display:
+   - Always show response JSON in #output, even if partial.
+   - If results are empty, show a message pointing to the local file path.
+
+7. Local installation guide for my Ubuntu 24.04 PC
+
+At the end of README.md, provide:
+
+1. How to set up the app on my machine:
+
+   - Prerequisites:
+     - Python 3.10+, venv, uvicorn, fastapi, httpx, Ollama (or an Llama‑compatible server).
+   - Steps:
+     - Download the project zip and extract to ~/quran-lens-app.
+     - cd ~/quran-lens-app/backend
+     - python3 -m venv venv
+     - source venv/bin/activate
+     - pip install fastapi uvicorn httpx
+     - Start Ollama (ollama serve) in a separate terminal.
+     - cd backend
+     - uvicorn main:app --host 0.0.0.0 --port 3000
+     - Open http://localhost:3000
+
+2. How to replace the Quran text:
+
+   - Show one way to use:
+     - fawazahmed0/quran‑api or alquran‑api to fetch verses.
+   - Provide a one‑time script (Python) that:
+     - Fetches all surahs.
+     - Saves them to data/quran_arabic.json in the required format.
+
+8. What NOT to do
+
+   - Do not generate a mobile app or Replit mobile builders.
+   - Do not require cloud hosting; emphasize local / offline usage.
+   - Do not create complex React / Vue; keep frontend in vanilla HTML + JS.
+
+When you generate the project:
+
+- First, output the **full backend/main.py**.
+- Then the **frontend/index.html**.
+- Then structure the remaining files (requirements.txt, README.md, example data) clearly.
+
+Make sure the code is clean, well‑indented, and will run on my Ubuntu 24.04 machine exactly as described.
