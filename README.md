@@ -4,6 +4,7 @@ A powerful, offline-capable Quran visualization and translation tool that applie
 
 **Features:**
 - 📖 Browse the Quran with large, right-to-left Arabic typography
+- 📥 **Download the full Quran locally** (all 114 surahs, 6,236 verses) for offline use
 - 🔍 Apply multiple "lenses" (interpretive frameworks) to any verse
 - 🤖 AI-powered translations via local Ollama or remote APIs (OpenAI, Perplexity)
 - 💾 Fully local — runs entirely on your machine, no cloud required
@@ -25,7 +26,12 @@ TL;DR:
 cd quran-lens-app
 pnpm install
 pnpm --filter @workspace/db run push
+
+# Option A: Quick test with 29 sample verses
 pnpm --filter @workspace/scripts run seed-quran
+
+# Option B: Download complete Quran (6,236 verses) for offline use
+pnpm --filter @workspace/scripts run fetch-full-quran
 
 # In separate terminals:
 ollama serve          # Terminal 1 (optional, for local AI)
@@ -34,6 +40,8 @@ pnpm --filter @workspace/quran-lens run dev  # Terminal 3 (frontend)
 ```
 
 Then open http://localhost:5173 (or whatever port is shown).
+
+See **detailed instructions** in [`INSTALL.md`](./INSTALL.md).
 
 ## Project Structure
 
@@ -52,6 +60,17 @@ quran-lens-app/
 ├── INSTALL.md                   # Detailed local installation guide
 └── README.md                    # This file
 ```
+
+## Offline Storage & Full Quran Download
+
+The app is designed for **complete offline use**:
+
+1. **Download the full Quran once** — Run `pnpm --filter @workspace/scripts run fetch-full-quran` to download all 6,236 verses from the free alquran-api.pages.dev API
+2. **Stored in local PostgreSQL** — All verses are saved in your local database for instant offline access
+3. **No internet required** — Once downloaded, browse, search, and apply lenses without any internet connection
+4. **AI translations offline** — Use local Ollama models for AI-powered translations without calling external APIs
+
+The initial download takes 2-5 minutes (one-time), then everything is cached locally in PostgreSQL.
 
 ## What are "Lenses"?
 

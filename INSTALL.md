@@ -134,10 +134,12 @@ pnpm --filter @workspace/db run push
 
 ## Step 7: Seed the Database
 
-The project comes with sample Quran verses and interpretive lenses. Seed them:
+You have two options:
+
+### Option A: Quick Start with Sample Data (Recommended First)
+Seed just 29 sample verses and 2 example lenses to test the app:
 
 ```bash
-# Seed 29 sample verses and 2 example lenses
 pnpm --filter @workspace/scripts run seed-quran
 
 # You should see:
@@ -147,6 +149,25 @@ pnpm --filter @workspace/scripts run seed-quran
 # Inserted 2 lens configurations
 # Seeding complete!
 ```
+
+### Option B: Download the Full Quran (6,236 Verses)
+For complete offline use with all 114 surahs, fetch the full Quran from the free alquran-api.pages.dev API:
+
+```bash
+# Download complete Quran (takes 2-5 minutes)
+pnpm --filter @workspace/scripts run fetch-full-quran
+
+# You should see:
+# 🕋 Fetching complete Quran from alquran-api.pages.dev...
+# Fetching surah 1/114... ✅ 7 verses
+# Fetching surah 2/114... ✅ 286 verses
+# ... (continues for all 114 surahs)
+# ✨ Complete!
+# Total verses inserted: 6236
+# Total errors: 0
+```
+
+**Note:** The full download requires an internet connection (one-time). After this, all verses are stored in your local PostgreSQL database and available offline.
 
 ## Step 8: (Optional) Install and Start Ollama
 

@@ -6,6 +6,7 @@
   "scripts": {
     "hello": "tsx ./src/hello.ts",
     "seed-quran": "tsx ./src/seed-quran.ts",
+    "fetch-full-quran": "tsx ./src/fetch-full-quran.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
